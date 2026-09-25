@@ -1,5 +1,5 @@
-﻿using BepInEx;
-using Console;
+using BepInEx;
+
 using GorillaExtensions;
 using GorillaNetworking;
 using HarmonyLib;
@@ -26,7 +26,7 @@ namespace RagdollMod
             instance = this;
             HarmonyPatches.ApplyHarmonyPatches();
 
-            Console.Console.LoadConsole();
+
         }
 
         private static AssetBundle assetBundle;
@@ -85,9 +85,12 @@ namespace RagdollMod
         {
             try
             {
-                VRRig.LocalRig.transform.Find("rig/body_pivot/TransferrableItemLeftShoulder").gameObject.SetActive(false);
-                VRRig.LocalRig.transform.Find("rig/body_pivot/TransferrableItemRightShoulder").gameObject.SetActive(false);
-                VRRig.LocalRig.transform.Find("rig/head/gorillaface").gameObject.layer = LayerMask.NameToLayer("Default");
+                Transform ls = VRRig.LocalRig.transform.Find("rig/body_pivot/TransferrableItemLeftShoulder");
+                if (ls) ls.gameObject.SetActive(false);
+                Transform rs = VRRig.LocalRig.transform.Find("rig/body_pivot/TransferrableItemRightShoulder");
+                if (rs) rs.gameObject.SetActive(false);
+                Transform face = VRRig.LocalRig.transform.Find("rig/head/gorillaface");
+                if (face) face.gameObject.layer = LayerMask.NameToLayer("Default");
 
                 foreach (GameObject Cosmetic in VRRig.LocalRig.cosmetics)
                 {
@@ -104,10 +107,13 @@ namespace RagdollMod
 
         public static void EnableCosmetics()
         {
-            VRRig.LocalRig.transform.Find("rig/body_pivot/TransferrableItemLeftShoulder").gameObject.SetActive(true);
-            VRRig.LocalRig.transform.Find("rig/body_pivot/TransferrableItemRightShoulder").gameObject.SetActive(true);
+            Transform ls = VRRig.LocalRig.transform.Find("rig/body_pivot/TransferrableItemLeftShoulder");
+            if (ls) ls.gameObject.SetActive(true);
+            Transform rs = VRRig.LocalRig.transform.Find("rig/body_pivot/TransferrableItemRightShoulder");
+            if (rs) rs.gameObject.SetActive(true);
 
-            VRRig.LocalRig.transform.Find("rig/head/gorillaface").gameObject.layer = LayerMask.NameToLayer("MirrorOnly");
+            Transform face = VRRig.LocalRig.transform.Find("rig/head/gorillaface");
+            if (face) face.gameObject.layer = LayerMask.NameToLayer("MirrorOnly");
             foreach (GameObject Cosmetic in portedCosmetics)
             {
                 Cosmetic.transform.SetParent(VRRig.LocalRig.mainCamera.transform.Find("HeadCosmetics"), false);
@@ -130,8 +136,9 @@ namespace RagdollMod
             endDeathSoundTime = Time.time + 5.265f;
 
             Ragdoll = LoadAsset("ragdoll");
-            Ragdoll.transform.Find("Stand/Gorilla Rig/body").transform.position = VRRig.LocalRig.transform.Find("rig/body_pivot").position;
-            Ragdoll.transform.Find("Stand/Gorilla Rig/body").transform.rotation = VRRig.LocalRig.transform.Find("rig/body_pivot").rotation;
+            Transform bodyPivot = VRRig.LocalRig.transform.Find("rig/body_pivot") ?? VRRig.LocalRig.transform;
+            Ragdoll.transform.Find("Stand/Gorilla Rig/body").transform.position = bodyPivot.position;
+            Ragdoll.transform.Find("Stand/Gorilla Rig/body").transform.rotation = bodyPivot.rotation;
 
             Ragdoll.transform.Find("Stand/Gorilla Rig/body/shoulder.L/upper_arm.L/forearm.L/hand.L").transform.position = VRRig.LocalRig.leftHand.rigTarget.transform.position;
             Ragdoll.transform.Find("Stand/Gorilla Rig/body/shoulder.L/upper_arm.L/forearm.L/hand.L").transform.rotation = VRRig.LocalRig.leftHand.rigTarget.transform.rotation;
@@ -192,17 +199,7 @@ namespace RagdollMod
             return world - GorillaTagger.Instance.bodyCollider.transform.position + GorillaTagger.Instance.transform.position;
         }
 
-        public bool GetRightJoystickDown()
-        {
-            if (IsSteam)
-                return SteamVR_Actions.gorillaTag_RightJoystickClick.GetState(SteamVR_Input_Sources.RightHand);
-            else
-            {
-                bool rightJoystickClick;
-                ControllerInputPoller.instance.rightControllerDevice.TryGetFeatureValue(UnityEngine.XR.CommonUsages.primary2DAxisClick, out rightJoystickClick);
-                return rightJoystickClick;
-            }
-        }
+
 
         public bool hasInit;
         public bool IsSteam;
@@ -251,7 +248,7 @@ namespace RagdollMod
 
         public void Update()
         {
-            if (GorillaLocomotion.GTPlayer.Instance != null)
+            if (GorillaLocomotion.GTPlayer.Instance == null)
                 return;
 
             if (!hasInit)
@@ -260,7 +257,7 @@ namespace RagdollMod
                 IsSteam = Traverse.Create(PlayFabAuthenticator.instance).Field("platform").GetValue().ToString().ToLower() == "steam";
             }
 
-            bool dying = GetRightJoystickDown() || UnityInput.Current.GetKey(KeyCode.B);
+            bool dying = ControllerInputPoller.instance.rightControllerSecondaryButton || UnityInput.Current.GetKey(KeyCode.B);
             if (dying && !lastLeftHeld)
             {
                 isDead = !isDead;
