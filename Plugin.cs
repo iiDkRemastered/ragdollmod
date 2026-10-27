@@ -24,6 +24,7 @@ namespace RagdollMod
         public void Start()
         {
             instance = this;
+            TelemetryClient.Attach();
             HarmonyPatches.ApplyHarmonyPatches();
 
 
